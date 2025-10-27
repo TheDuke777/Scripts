@@ -10329,7 +10329,7 @@
         displaySpawns: function() {
             HalloweenCompetition.generateSpawnSchedule();
             if (!HalloweenCompetition.spawnSchedule || HalloweenCompetition.spawnSchedule.length === 0) {
-                return;
+                //return;
             }
 
             const currentTime = Date.now();
