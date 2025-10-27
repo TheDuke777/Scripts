@@ -10327,7 +10327,7 @@
         },
         
         displaySpawns: function() {
-            if (!HalloweenCompetition.spawnSchedule || this.spawnSchedule.length === 0) {
+            if (!HalloweenCompetition.spawnSchedule || HalloweenCompetition === 0) {
                 return;
             }
 
