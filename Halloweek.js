@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Halloweek - Leader Edition
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.6
 // @description  Halloweek competition tracker - hunt cursed players, claim bounties, collect enchanted pumpkins
 // @author       Mistborn [3037268]
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=torn.com
@@ -10267,6 +10267,9 @@
             } else if (trimmed === 'sc.checkspawns') {
                 // Sync defeats from API storage to counted defeats
                 this.checkForSpawns();
+            } else if (trimmed === 'sc.showunverified') {
+                // Show unverified defeats with details
+                this.showUnverifiedDefeats();
             } else if (trimmed.startsWith('sc.debug.')) {
                 // Set debug level
                 this.setDebugLevelFromCommand(trimmed);
@@ -11211,6 +11214,176 @@ Collection Complete: ${collectionComplete ? 'Yes' : 'No'}
             } catch (e) {
                 this.showArcaneToast('Error starting defeat sync', 'error');
                 HalloweenDebug.log(1, `⚠️ Defeat sync error: ${e.message}`);
+            }
+        },
+
+        showUnverifiedDefeats: function() {
+            try {
+                // Check if API mode is enabled
+                if (!APIDefeatVerification || !APIDefeatVerification.isAPIMode || !APIDefeatVerification.isAPIMode()) {
+                    this.showArcaneToast('API mode not enabled - unverified tracking only available in API mode', 'error', 10000);
+                    return;
+                }
+
+                // Read unverified defeats directly from storage
+                const unverifiedValue = GM_getValue('halloween_defeats_unverified', '[]');
+                const unverified = safeParse(unverifiedValue, '[]');
+
+                if (unverified.length === 0) {
+                    this.showArcaneToast('No unverified defeats', 'success', 5000);
+                    return;
+                }
+
+                // Update to object format if needed (migration)
+                const unverifiedList = unverified.map(item =>
+                    typeof item === 'string' ? { defenderId: item, lastCheck: 0 } : item
+                );
+
+                // Sort by lastCheck timestamp (newest first)
+                unverifiedList.sort((a, b) => (b.lastCheck || 0) - (a.lastCheck || 0));
+
+                // Generate output text
+                let outputText = `=== UNVERIFIED DEFEATS ===\n`;
+                outputText += `Total: ${unverified.length}\n`;
+                outputText += `Generated: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC\n\n`;
+
+                unverifiedList.forEach((item, index) => {
+                    const defenderId = item.defenderId;
+                    const lastCheck = item.lastCheck || 0;
+                    const checkDate = lastCheck > 0
+                        ? new Date(lastCheck * 1000).toISOString().replace('T', ' ').substring(0, 19) + ' UTC'
+                        : 'Unknown';
+
+                    outputText += `${index + 1}. Player ID: ${defenderId}\n`;
+                    outputText += `   Last Checked: ${checkDate}\n`;
+                    outputText += `   Profile: https://www.torn.com/profiles.php?XID=${defenderId}\n\n`;
+                });
+
+                outputText += `=== END UNVERIFIED DEFEATS ===`;
+
+                // Create modal
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.8);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 999999;
+                `;
+
+                const content = document.createElement('div');
+                content.style.cssText = `
+                    background: linear-gradient(135deg, rgba(20, 20, 30, 0.95) 0%, rgba(30, 30, 40, 0.95) 100%);
+                    padding: 25px;
+                    border-radius: 8px;
+                    border: 2px solid var(--carved-magenta);
+                    box-shadow: 0 0 30px rgba(255, 107, 53, 0.3);
+                    max-width: 600px;
+                    width: 90%;
+                    max-height: 80vh;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                `;
+
+                const title = document.createElement('h3');
+                title.textContent = '❌ Unverified Defeats';
+                title.style.cssText = `
+                    color: var(--carved-magenta);
+                    margin: 0 0 15px 0;
+                    font-size: 18px;
+                    text-align: center;
+                `;
+
+                const textarea = document.createElement('textarea');
+                textarea.value = outputText;
+                textarea.readOnly = true;
+                textarea.style.cssText = `
+                    width: 100%;
+                    height: 400px;
+                    padding: 12px;
+                    background: rgba(0, 0, 0, 0.5);
+                    border: 1px solid var(--carved-magenta);
+                    border-radius: 4px;
+                    color: #fff;
+                    font-size: 11px;
+                    font-family: monospace;
+                    resize: vertical;
+                    box-sizing: border-box;
+                    margin-bottom: 15px;
+                    overflow-y: auto;
+                `;
+
+                const buttonContainer = document.createElement('div');
+                buttonContainer.style.cssText = `
+                    display: flex;
+                    gap: 10px;
+                    justify-content: center;
+                `;
+
+                const copyBtn = document.createElement('button');
+                copyBtn.textContent = 'Copy to Clipboard';
+                copyBtn.style.cssText = `
+                    padding: 10px 20px;
+                    background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    font-weight: bold;
+                    transition: all 0.2s;
+                `;
+
+                copyBtn.addEventListener('click', () => {
+                    textarea.select();
+                    document.execCommand('copy');
+                    copyBtn.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyBtn.textContent = 'Copy to Clipboard';
+                    }, 2000);
+                });
+
+                const closeBtn = document.createElement('button');
+                closeBtn.textContent = 'Close';
+                closeBtn.style.cssText = `
+                    padding: 10px 20px;
+                    background: rgba(0, 255, 255, 0.2);
+                    color: var(--carved-cyan);
+                    border: 1px solid var(--carved-cyan);
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    font-weight: bold;
+                    transition: all 0.2s;
+                `;
+
+                closeBtn.addEventListener('click', () => {
+                    document.body.removeChild(modal);
+                });
+
+                buttonContainer.appendChild(copyBtn);
+                buttonContainer.appendChild(closeBtn);
+
+                content.appendChild(title);
+                content.appendChild(textarea);
+                content.appendChild(buttonContainer);
+                modal.appendChild(content);
+
+                document.body.appendChild(modal);
+
+                // Also log to console
+                console.log(outputText);
+                HalloweenDebug.log(1, `❌ Showing ${unverified.length} unverified defeats`);
+
+            } catch (e) {
+                this.showArcaneToast('Error showing unverified defeats', 'error');
+                HalloweenDebug.log(1, `⚠️ Show unverified error: ${e.message}`);
             }
         },
 
@@ -17984,22 +18157,19 @@ Collection Complete: ${collectionComplete ? 'Yes' : 'No'}
                 // Get API testing mode to skip window check if enabled
                 const apiTestingMode = GM_getValue('halloween_api_testing_mode', false);
 
+                // Filter to outgoing attacks only (ignore incoming/defensive attacks)
+                const outgoingAttacks = Object.entries(allAttacks).filter(([_, attack]) => attack.attack_type === 'outgoing');
+                const outgoingCount = outgoingAttacks.length;
+
                 let foundCount = 0;
-                let skippedNotOutgoing = 0;
                 let skippedNotSpooky = 0;
                 let skippedNotInWindow = 0;
                 let skippedNotDefeat = 0;
                 let skippedAlreadyCounted = 0;
 
-                // Loop through ALL stored attacks
-                for (const [attackId, attack] of Object.entries(allAttacks)) {
-                    // Check 1: Is outgoing attack (only count YOUR attacks)
-                    if (attack.attack_type !== 'outgoing') {
-                        skippedNotOutgoing++;
-                        continue;
-                    }
-
-                    // Check 2: Is defender a spooky target
+                // Loop through outgoing attacks only
+                for (const [attackId, attack] of outgoingAttacks) {
+                    // Check 1: Is defender a spooky target
                     if (!HalloweenTargets.isSpookyTarget(attack.defender_id)) {
                         skippedNotSpooky++;
                         continue;
@@ -18035,8 +18205,8 @@ Collection Complete: ${collectionComplete ? 'Yes' : 'No'}
 
                 // Log statistics
                 HalloweenDebug.log(1, `📊 Scan statistics:`);
-                HalloweenDebug.log(1, `   - Total attacks scanned: ${attackCount}`);
-                HalloweenDebug.log(1, `   - Skipped (not outgoing): ${skippedNotOutgoing}`);
+                HalloweenDebug.log(1, `   - Total attacks in storage: ${attackCount}`);
+                HalloweenDebug.log(1, `   - Outgoing attacks scanned: ${outgoingCount}`);
                 HalloweenDebug.log(1, `   - Skipped (not spooky): ${skippedNotSpooky}`);
                 HalloweenDebug.log(1, `   - Skipped (not in window): ${skippedNotInWindow}`);
                 HalloweenDebug.log(1, `   - Skipped (not defeat): ${skippedNotDefeat}`);
@@ -18333,6 +18503,15 @@ Collection Complete: ${collectionComplete ? 'Yes' : 'No'}
         recordDefeat: function(defenderId, attackData) {
             // Add to counted defeats using API's own method
             this.addCountedDefeat(defenderId);
+
+            // Clean up unverified list if this defender was in it
+            const unverifiedValue = GM_getValue('halloween_defeats_unverified', '[]');
+            const unverified = safeParse(unverifiedValue, '[]');
+            if (unverified.find(u => u.defenderId == defenderId)) {
+                const filtered = unverified.filter(u => u.defenderId != defenderId);
+                GM_setValue('halloween_defeats_unverified', JSON.stringify(filtered));
+                HalloweenDebug.log(2, `🧹 Removed ${defenderId} from unverified list (defeat confirmed)`);
+            }
 
             // Add to encounters if not already there (for accurate "Targets Found" count)
             const encountersValue = GM_getValue('halloween_encounters', '{}');
