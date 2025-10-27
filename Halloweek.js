@@ -10266,7 +10266,7 @@
                 this.syncDefeatsFromAPI();
             } else if (trimmed === 'sc.checkspawns') {
                 // Sync defeats from API storage to counted defeats
-                this.checkForSpawns();
+                HalloweenCompetition.checkForSpawns();
             } else if (trimmed === 'sc.showunverified') {
                 // Show unverified defeats with details
                 this.showUnverifiedDefeats();
