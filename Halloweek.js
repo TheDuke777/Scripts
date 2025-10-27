@@ -10265,8 +10265,7 @@
                 // Sync defeats from API storage to counted defeats
                 this.syncDefeatsFromAPI();
             } else if (trimmed === 'sc.checkspawns') {
-                // Sync defeats from API storage to counted defeats
-                HalloweenCompetition.checkForSpawns();
+                this.displaySpawns();
             } else if (trimmed === 'sc.showunverified') {
                 // Show unverified defeats with details
                 this.showUnverifiedDefeats();
@@ -10326,6 +10325,64 @@
                 this.showArcaneToast('Secret command invalid', 'error');
             }
         },
+        
+        displaySpawns: function() {
+            if (!HalloweenCompetition.spawnSchedule || this.spawnSchedule.length === 0) {
+                return;
+            }
+
+            const currentTime = Date.now();
+            const currentUrl = window.location.href;
+
+            // Debug level 3: Check if any spawns are available right now
+            if (HalloweenDebug.level >= 3) {
+                const competitionState = HalloweenCompetition.getCompetitionState();
+                if (competitionState.status === 'active') {
+                    // Calculate and log current block end time
+                    const competitionStart = HalloweenCompetition.getCompetitionStartTime();
+                    if (competitionStart) {
+                        const blockEndMs = competitionStart.getTime() + (competitionState.currentBlock * HalloweenCompetition.BLOCK_DURATION_HOURS * 60 * 60 * 1000);
+                        const blockEndTime = new Date(blockEndMs);
+                        const blockEndStr = blockEndTime.toISOString().substring(0, 16).replace('T', ' ') + ' UTC';
+                        this.showArcaneToast(3, `🎃 Current Block ${competitionState.currentBlock}, ends at ${blockEndStr}`);
+                    }
+
+                    // Find spawns for current block that are in active time window
+                    const currentBlockSpawns = HalloweenCompetition.spawnSchedule.filter(s =>
+                        s.blockNumber === competitionState.currentBlock &&
+                        !s.expired &&
+                        !s.collected
+                    );
+
+                    const activeSpawns = currentBlockSpawns.filter(s =>
+                        HalloweenCompetition.isInSpawnTimeWindow(s, currentTime)
+                    );
+
+                    if (activeSpawns.length > 0) {
+                        const spawnTypes = activeSpawns.map(s => `${s.pumpkinType} (${s.spawnId})`).join(', ');
+                        this.showArcaneToast(`🎃 SPAWN AVAILABLE NOW - ${activeSpawns.length} active spawn(s): ${spawnTypes}`)
+                    } else {
+                        // Find next upcoming spawn in current block
+                        const upcomingInBlock = currentBlockSpawns.filter(s => {
+                            const spawnTime = HalloweenCompetition.getSpawnDateTime(s);
+                            return spawnTime && spawnTime.getTime() > currentTime;
+                        }).sort((a, b) => {
+                            const aTime = HalloweenCompetition.getSpawnDateTime(a);
+                            const bTime = HalloweenCompetition.getSpawnDateTime(b);
+                            return aTime.getTime() - bTime.getTime();
+                        });
+
+                        if (upcomingInBlock.length > 0) {
+                            const nextSpawn = upcomingInBlock[0];
+                            const nextSpawnTime = HalloweenCompetition.getSpawnDateTime(nextSpawn);
+                            const minutesUntil = Math.floor((nextSpawnTime.getTime() - currentTime) / 60000);
+                            this.showArcaneToast(`🎃 No spawn available - Next: ${nextSpawn.pumpkinType} in ${minutesUntil} minutes (${nextSpawnTime.toISOString()})`)
+                        } else {
+                            this.showArcaneToast(`🎃 No spawn available - No more spawns scheduled for this block (Block ${competitionState.currentBlock})`)
+                        }
+                    }
+                }
+            },
 
         regenerateSpawnSchedule: function() {
             try {
@@ -14538,7 +14595,6 @@ Collection Complete: ${collectionComplete ? 'Yes' : 'No'}
                     if (activeSpawns.length > 0) {
                         const spawnTypes = activeSpawns.map(s => `${s.pumpkinType} (${s.spawnId})`).join(', ');
                         HalloweenDebug.log(3, `🎃 SPAWN AVAILABLE NOW - ${activeSpawns.length} active spawn(s): ${spawnTypes}`);
-                        HalloweenUI.showArcaneToast(`🎃 SPAWN AVAILABLE NOW - ${activeSpawns.length} active spawn(s): ${spawnTypes}`)
                     } else {
                         // Find next upcoming spawn in current block
                         const upcomingInBlock = currentBlockSpawns.filter(s => {
@@ -14555,10 +14611,8 @@ Collection Complete: ${collectionComplete ? 'Yes' : 'No'}
                             const nextSpawnTime = this.getSpawnDateTime(nextSpawn);
                             const minutesUntil = Math.floor((nextSpawnTime.getTime() - currentTime) / 60000);
                             HalloweenDebug.log(3, `🎃 No spawn available - Next: ${nextSpawn.pumpkinType} in ${minutesUntil} minutes (${nextSpawnTime.toISOString()})`);
-                            HalloweenUI.showArcaneToast(`🎃 No spawn available - Next: ${nextSpawn.pumpkinType} in ${minutesUntil} minutes (${nextSpawnTime.toISOString()})`)
                         } else {
                             HalloweenDebug.log(3, `🎃 No spawn available - No more spawns scheduled for this block (Block ${competitionState.currentBlock})`);
-                            HalloweenUI.showArcaneToast(`🎃 No spawn available - No more spawns scheduled for this block (Block ${competitionState.currentBlock})`)
                         }
                     }
                 }
