@@ -10382,7 +10382,8 @@
                         }
                     }
                 }
-            },
+            }
+        },
 
         regenerateSpawnSchedule: function() {
             try {
