@@ -10264,7 +10264,7 @@
             } else if (trimmed === 'sc.syncdefeats') {
                 // Sync defeats from API storage to counted defeats
                 this.syncDefeatsFromAPI();
-            } else if (trimmed === 'sc.checkspawns') {
+            } else if (trimmed === 'sc.displayspawns') {
                 this.displaySpawns();
             } else if (trimmed === 'sc.showunverified') {
                 // Show unverified defeats with details
@@ -10327,7 +10327,8 @@
         },
         
         displaySpawns: function() {
-            if (!HalloweenCompetition.spawnSchedule || HalloweenCompetition === 0) {
+            HalloweenCompetition.generateSpawnSchedule();
+            if (!HalloweenCompetition.spawnSchedule || HalloweenCompetition.spawnSchedule.length === 0) {
                 return;
             }
 
