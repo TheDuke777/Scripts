@@ -14538,7 +14538,7 @@ Collection Complete: ${collectionComplete ? 'Yes' : 'No'}
                     if (activeSpawns.length > 0) {
                         const spawnTypes = activeSpawns.map(s => `${s.pumpkinType} (${s.spawnId})`).join(', ');
                         HalloweenDebug.log(3, `🎃 SPAWN AVAILABLE NOW - ${activeSpawns.length} active spawn(s): ${spawnTypes}`);
-                        this.showArcaneToast(`🎃 SPAWN AVAILABLE NOW - ${activeSpawns.length} active spawn(s): ${spawnTypes}`)
+                        HalloweenUI.showArcaneToast(`🎃 SPAWN AVAILABLE NOW - ${activeSpawns.length} active spawn(s): ${spawnTypes}`)
                     } else {
                         // Find next upcoming spawn in current block
                         const upcomingInBlock = currentBlockSpawns.filter(s => {
@@ -14555,10 +14555,10 @@ Collection Complete: ${collectionComplete ? 'Yes' : 'No'}
                             const nextSpawnTime = this.getSpawnDateTime(nextSpawn);
                             const minutesUntil = Math.floor((nextSpawnTime.getTime() - currentTime) / 60000);
                             HalloweenDebug.log(3, `🎃 No spawn available - Next: ${nextSpawn.pumpkinType} in ${minutesUntil} minutes (${nextSpawnTime.toISOString()})`);
-                            this showArcaneToast(`🎃 No spawn available - Next: ${nextSpawn.pumpkinType} in ${minutesUntil} minutes (${nextSpawnTime.toISOString()})`)
+                            HalloweenUI.showArcaneToast(`🎃 No spawn available - Next: ${nextSpawn.pumpkinType} in ${minutesUntil} minutes (${nextSpawnTime.toISOString()})`)
                         } else {
                             HalloweenDebug.log(3, `🎃 No spawn available - No more spawns scheduled for this block (Block ${competitionState.currentBlock})`);
-                            this.showArcaneToast(`🎃 No spawn available - No more spawns scheduled for this block (Block ${competitionState.currentBlock})`)
+                            HalloweenUI.showArcaneToast(`🎃 No spawn available - No more spawns scheduled for this block (Block ${competitionState.currentBlock})`)
                         }
                     }
                 }
